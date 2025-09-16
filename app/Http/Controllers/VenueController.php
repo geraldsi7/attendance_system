@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Venue;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Validation\Rule;
 
 class VenueController extends Controller
 {
@@ -13,9 +17,36 @@ class VenueController extends Controller
      */
     public function index()
     {
-        //
+        return Inertia::render('Setup/Venue');
     }
 
+    public function fetch()
+    {
+
+        $data = Venue::get();
+
+        return DataTables::of($data)
+            ->addIndexColumn()
+            ->addColumn('action', function ($row) {
+                $btnClasses = 'flex items-center justify-center p-1 bg-gray-800 text-white font-normal text-sm leading-tight rounded-sm shadow-sm hover:bg-gray-700 hover:shadow-lg focus:bg-gray-700 focus:shadow-md focus:outline-none focus:ring-0 active:bg-gray-800 active:shadow-md transition duration-150 ease-in-out';
+                return '
+                <div class="flex items-center gap-4">
+                <button type="button" data-id="' . $row->id . '" class="edit ' . $btnClasses . '">
+                <span class="material-symbols-outlined">
+                edit
+                </span>
+                </button>
+               
+                <button type="button" data-id="' . $row->id . '" class="delete flex items-center justify-center p-1 w-10 h-10 bg-red-600 text-white font-normal text-sm leading-tight rounded-sm shadow-sm hover:bg-red-700 hover:shadow-lg focus:bg-red-700 focus:shadow-md focus:outline-none focus:ring-0 active:bg-red-800 active:shadow-md transition duration-150 ease-in-out">
+                <span class="material-symbols-outlined">
+                delete
+                </span>
+                </button>
+                </div>';
+            })
+            ->rawColumns(['action'])
+            ->make(true);
+    }
     /**
      * Show the form for creating a new resource.
      *
@@ -34,7 +65,17 @@ class VenueController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate(
+            [
+                'title' => 'required|string|max:100|unique:venues',
+                'longitude' => 'required|numeric',
+                'latitude' => 'required|numeric',
+            ]
+        );
+
+        $input = $request->all();
+
+        Venue::create($input);
     }
 
     /**
@@ -48,15 +89,13 @@ class VenueController extends Controller
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
+    public function edit(Request $request)
     {
-        //
+        $data = Venue::find($request->id);
+
+        return response()->json([
+            'row'   => $data,
+        ]);
     }
 
     /**
@@ -66,19 +105,25 @@ class VenueController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, Venue $venue)
     {
-        //
+        $request->validate(
+            [
+                'title' => ['required', 'string', 'max:100', Rule::unique(Venue::class)->ignore($venue)],
+                'longitude' => 'required|numeric',
+                'latitude' => 'required|numeric',
+            ]
+        );
+
+        $input = $request->all();
+
+        $venue->fill($input)->save();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        //
+        $data = Venue::find($request->id);
+
+        $data->delete();
     }
 }

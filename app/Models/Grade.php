@@ -9,12 +9,23 @@ class Grade extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'department_id',
+        'level_id'
+    ];
 
-    public function course(){
-        return $this->hasMany(Course::class);
+    public function classe()
+    {
+        return $this->hasMany(Classe::class);
     }
 
-    public function section(){
-        return $this->hasMany(Section::class);
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function level()
+    {
+        return $this->belongsTo(Level::class);
     }
 }

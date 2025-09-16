@@ -9,6 +9,11 @@ class Venue extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'title',
+        'longitude',
+        'latitude'
+    ];
 
     public function session(){
         return $this->hasMany(Session::class);

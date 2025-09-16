@@ -23,6 +23,7 @@ export default {
 </script>
 
 <template>
+
   <Head title="Courses" />
 
   <AuthenticatedLayout>
@@ -53,15 +54,17 @@ export default {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="course in  courses" :key="course" class="odd:bg-white even:bg-gray-50 border-b">
+                <tr v-for="(course, index) in courses" :key="course.code" class="odd:bg-white even:bg-gray-50 border-b">
                   <td class="px-6 py-4 uppercase">
-                    {{ course.course_code }}
+                    {{ course.code }}
                   </td>
                   <td class="px-6 py-4 capitalize">
                     {{ course.title }}
                   </td>
-                  <td class="px-6 py-4">
-                    {{ course.grade.title }} {{ course.grade.year }} [{{ course.grade.iso }} {{ course.grade.year }}]
+                  <td class="px-6 py-4 grid grid-rows-${course.classe.length} gap-y-3.5">
+                    <div v-for="(classe, i) in course.classe">
+                      <p>{{ classe.title }}</p>
+                    </div>
                   </td>
                 </tr>
               </tbody>

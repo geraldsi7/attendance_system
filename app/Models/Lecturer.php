@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Notifications\sendLecturerPasswordResetNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class Lecturer extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     protected $guard = 'lecturer';
     protected $fillable = [
@@ -40,6 +42,19 @@ class Lecturer extends Authenticatable
     ];
 
     public function course(){
-        return $this->hasMany(Course::class);
+        return $this->belongsToMany(Course::class);
+    }
+
+    public function classe(){
+        return $this->belongsToMany(Classe::class);
+    }
+
+    public function session(){
+        return $this->hasMany(Session::class);
+    }
+
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new sendLecturerPasswordResetNotification($token));
     }
 }

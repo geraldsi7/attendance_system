@@ -4,26 +4,33 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Session extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'title',
+        'lecturer_id',
         'course_id',
-        'section_id',
+        'classe_id',
         'venue_id',
         'starts_at',
         'ends_at',
         'status'
     ];
 
-    public function section(){
-        return $this->belongsTo(Section::class);
-    }
-
     public function course(){
         return $this->belongsTo(Course::class);
+    }
+
+    public function classe(){
+        return $this->belongsTo(Classe::class);
+    }
+
+    public function lecturer(){
+        return $this->belongsTo(Lecturer::class);
     }
 
     public function venue(){

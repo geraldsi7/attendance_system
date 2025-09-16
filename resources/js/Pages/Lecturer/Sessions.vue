@@ -1,187 +1,165 @@
 <script>
 import AuthenticatedLayout from "@/Layouts/Lecturer/AuthenticatedLayout.vue";
 import { Head, useForm } from "@inertiajs/inertia-vue3";
+import { Inertia } from "@inertiajs/inertia";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
+import TextInput from "@/Components/TextInput.vue";
 import Modal from "@/Components/Modal.vue";
+import SelectInput from "@/Components/SelectInput.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
+import Dropdown from "@/Components/Dropdown.vue";
 
 export default {
   components: {
     AuthenticatedLayout,
     Head,
     useForm,
+    Inertia,
+    PrimaryButton,
+    TextInput,
     Modal,
+    SelectInput,
     InputError,
     InputLabel,
+    Dropdown,
   },
   props: {
     errors: Object,
     courses: Object,
-    classes: Object,
     venues: Object,
-    students: Object,
-    minDateTime: String,
   },
   data() {
-    const classFilter = useForm({
-      course_id: "",
+    const filterForm = useForm({
+      date: new Date().toISOString().substr(0, 10),
     });
 
     const sessionForm = useForm({
       id: null,
+      title: null,
       course_id: "",
-      class: "",
-      section_id: "",
+      classe_id: "",
       venue_id: "",
-      starts_at: "",
-      ends_at: "",
+      starts_at: null,
+      ends_at: null,
     });
 
-    const attendanceFilter = useForm({
-      status: "present",
-    });
+    // const attendanceFilter = useForm({
+    //   status: "present",
+    // });
 
     return {
-      classFilter,
-      openDropdownMenu: false,
-      sections: [],
+      filterForm,
       sessionForm,
-      showModal: false,
-      showPublishModal: false,
-      showEndModal: false,
-      showViewModal: false,
-      showDeleteModal: false,
-      action: null,
+      isLoadingData: true,
+      sessions: [],
+      classes: [],
+
+      sessionFormModal: false,
       editContent: false,
-      selectedSessionRow: null,
+      action: "",
 
-      students_present: null,
-      students_absent: null,
-      students_present_percentage : null,
-      students_absent_percentage : null,
+      selectedRow: null,
+      sessionOpenModal: false,
+      sessionDestroyModal: false,
 
-      attendanceFilter
+      // students_present: null,
+      // students_absent: null,
+      // students_present_percentage: null,
+      // students_absent_percentage: null,
+
+      // attendanceFilter,
     };
   },
   mounted() {
-
     this.fetchSessions();
-
-    $(document).on("click", ".rowDropdown", (evt) => {
-      const data = $(evt.target).attr("dropdown-log");
-
-      this.toggleDropdown(data)
-    });
-
-
-    //end of dropdown
-
-    // edit session
-    $(document).on("click", ".edit-session", (evt) => {
-      const data = $(evt.target).data("logId");
-      this.editSession(data);
-    });
-    //end of edit session
-
-    // publish session
-    $(document).on("click", ".publish-session", (evt) => {
-      const data = $(evt.target).data("logId");
-      this.showPublishSessionModal(data);
-    });
-    //end of publish session
-
-    // end session
-    $(document).on("click", ".end-session", (evt) => {
-      const data = $(evt.target).data("logId");
-      this.showEndSessionModal(data);
-    });
-    //end of end session
-
-    // view session
-    $(document).on("click", ".view-session", (evt) => {
-      const data = $(evt.target).data("logId");
-      this.showViewSessionModal(data);
-    });
-    // end of view session
-
-    // delete session
-    $(document).on("click", ".delete-session", (evt) => {
-      const data = $(evt.target).data("logId");
-      this.showDeleteSessionModal(data);
-    });
-    //end of delete session
+    setInterval(this.reloadPage, 1000 * 63);
   },
   methods: {
-    clearErrors() {
-      Object.keys(this.errors).forEach((field) => delete this.errors[field]);
+    reloadPage() {
+      Inertia.reload({
+        preserveScroll: true,
+      });
     },
+    fetchSessions() {
+      this.isLoadingData = true;
 
-    // create session
-    createSession() {
-      this.action = 'add'
-      this.showModal = true
+      axios
+        .get(route("lecturer.fetch.sessions"), {
+          params: {
+            date: this.filterForm.date,
+          },
+        })
+        .then((response) => [(this.sessions = response.data.row)])
+        .catch((error) => toastr.error("Something went wrong"))
+        .finally(() => {
+          this.isLoadingData = false; // Set loading state to false
+        });
     },
+    showSessionFormModal(action, data) {
+      this.action = action;
 
-    // edit session
-    editSession(data) {
-      this.action = 'edit'
-      this.showModal = true
-      this.editContent = true
-      axios.get(route("lecturer.sessions.edit"), {
-        params: {
-          id: data,
-        },
-      })
-        .then((response) => [
-          (this.sessionForm = useForm(Object.assign({}, response.data.row))),
-          this.sections = response.data.sections
-        ])
-        .catch((error) => console.log(error));
+      if (this.action === "edit") {
+        this.editContent = true;
+
+        Object.assign(this.sessionForm, data);
+        this.sessionForm.starts_at = new Date(data.starts_at).toISOString().slice(0, 16)
+        this.sessionForm.ends_at = new Date(data.ends_at).toISOString().slice(0, 16)
+        this.fetchClass();
+      }
+
+      this.sessionFormModal = true;
     },
+    hideSessionFormModal() {
+      this.sessionFormModal = false;
+      this.editContent = false;
 
-    showPublishSessionModal(data) {
-      this.showPublishModal = true
-      this.selectedSessionRow = data
+      this.sessionForm.reset();
+      this.sessionForm.clearErrors();
+
+      this.action = "";
     },
+    showSessionOpenModal(data) {
+      this.selectedRow = data;
 
-    closePublishSessionModal() {
-      this.showPublishModal = false
-      this.selectedSessionRow = null
+      this.sessionOpenModal = true;
+      this.$nextTick(() => {
+        let table = $("#attendance_data_table").DataTable();
+        table.destroy();
+        $("#attendance_data_table").DataTable({
+          order: [["0", "desc"]],
+        });
+      });
     },
-
-    showEndSessionModal(data) {
-      this.showEndModal = true
-      this.selectedSessionRow = data
-    },
-
-    closeEndSessionModal() {
-      this.showEndModal = false
-      this.selectedSessionRow = null
+    hideSessionOpenModal() {
+      this.selectedRow = null;
+      this.sessionOpenModal = false;
     },
 
     showViewSessionModal(data) {
-      this.showViewModal = true
-      this.selectedSessionRow = data
+      this.showViewModal = true;
+      this.selectedSessionRow = data;
 
-      axios.get(route("lecturer.sessions.show.attendance"), {
-        params: {
-          id: data,
-        },
-      })
+      axios
+        .get(route("lecturer.sessions.show.attendance"), {
+          params: {
+            id: data,
+          },
+        })
         .then((response) => [
-          this.students_present = response.data.students_present,
-          this.students_absent = response.data.students_absent,
-          this.students_present_percentage = response.data.students_present_percentage,
-          this.students_absent_percentage = response.data.students_absent_percentage,
-          this.fetchAttendanceData()
+          (this.students_present = response.data.students_present),
+          (this.students_absent = response.data.students_absent),
+          (this.students_present_percentage = response.data.students_present_percentage),
+          (this.students_absent_percentage = response.data.students_absent_percentage),
+          this.fetchAttendanceData(),
         ])
-        .catch((error) => console.log(error));        
+        .catch((error) => console.log(error));
     },
 
     fetchAttendanceData() {
       $("#attendance_table").DataTable({
         destroy: true,
-        stateSave: true,
+        stateSave: false,
         processing: false,
         serverSide: true,
         ajax: {
@@ -191,7 +169,7 @@ export default {
             status: this.attendanceFilter.status,
           },
         },
-        columns: [          
+        columns: [
           { data: "student_id", name: "student_id" },
           { data: "index_number", name: "index_number" },
           { data: "name", name: "name" },
@@ -204,111 +182,51 @@ export default {
     },
 
     closeViewSessionModal() {
-      this.showViewModal = false
-      this.selectedSessionRow = null
+      this.showViewModal = false;
+      this.selectedSessionRow = null;
 
-      this.students_present = null,
-      this.students_absent = null,
-      this.students_present_percentage = null,
-      this.students_absent_percentage = null,
-
-      this.attendanceFilter.reset()
-  
+      (this.students_present = null),
+        (this.students_absent = null),
+        (this.students_present_percentage = null),
+        (this.students_absent_percentage = null),
+        this.attendanceFilter.reset();
     },
 
-    showDeleteSessionModal(data) {
-      this.showDeleteModal = true
-      this.selectedSessionRow = data
-    },
-
-    closeDeleteSessionModal() {
-      this.showDeleteModal = false
-      this.selectedSessionRow = null
-    },
-
-    publishSession(data) {
-      axios.post(route("lecturer.sessions.publish"), {
-        id: data,
-      })
-        .then(
-          this.closePublishSessionModal(),
-          toastr.success("Session successfully published"),
-          this.fetchSessions(),
-        )
+    startSession(data) {
+      axios
+        .post(route("lecturer.sessions.start"), {
+          id: data.id,
+        })
+        .then(toastr.success("Session has started"), this.fetchSessions())
         .catch((error) => console.log(error));
     },
-
     endSession(data) {
-      axios.post(route("lecturer.sessions.end"), {
-        id: data,
-      })
-        .then(
-          this.closeEndSessionModal(),
-          toastr.success("Session successfully ended"),
-          this.fetchSessions(),
-        )
+      axios
+        .post(route("lecturer.sessions.end"), {
+          id: data.id,
+        })
+        .then(toastr.success("Session has ended"), this.fetchSessions())
         .catch((error) => console.log(error));
     },
-
-    deleteSession(data) {
-      axios.post(route("lecturer.sessions.destroy"), {
-        id: data,
-      })
+    showSessionDestroyModal(data) {
+      this.selectedRow = data;
+      this.sessionDestroyModal = true;
+    },
+    hideSessionDestroyModal() {
+      this.selectedRow = null;
+      this.sessionDestroyModal = false;
+    },
+    destroySession(data) {
+      axios
+        .post(route("lecturer.sessions.destroy"), {
+          id: data.id,
+        })
         .then(
-          this.closeDeleteSessionModal(),
-          toastr.success("Session successfully deleted"),
-          this.fetchSessions(),
+          this.hideSessionDestroyModal(),
+          toastr.success("Session deleted"),
+          this.fetchSessions()
         )
         .catch((error) => console.log(error));
-    },
-    fetchSessions() {
-      $("#sessions_table").DataTable({
-        destroy: true,
-        stateSave: false,
-        processing: false,
-        serverSide: true,
-        ajax: {
-          url: route("lecturer.fetch.sessions"),
-        },
-        columns: [
-          { data: "created_at", name: "created_at" },
-          { data: "course", name: "course" },
-          { data: "class", name: "class" },
-          { data: "section", name: "section" },
-          { data: "starts_at", name: "starts_at" },
-          { data: "ends_at", name: "ends_at" },
-          { data: "venue", name: "venue" },
-          { data: "status", name: "status" },
-          {
-            data: "action",
-            name: "action",
-            orderable: false,
-            searchable: false,
-          },
-        ],
-        lengthMenu: [
-          [10, 25, 50, 100, -1],
-          ["10", "25", "50", "100", "All"],
-        ],
-        order: [["0", "desc"]],
-      });
-    },
-    closeModal() {
-      this.showModal = false
-      this.editContent = false
-
-      this.sections = []
-      this.sessionForm = useForm({
-        id: null,
-        course_id: "",
-        class: "",
-        section_id: "",
-        venue_id: "",
-        starts_at: "",
-        ends_at: "",
-      });
-
-      this.clearErrors();
     },
     fetchClass() {
       axios
@@ -317,19 +235,15 @@ export default {
             id: this.sessionForm.course_id,
           },
         })
-        .then((response) => [
-          (this.sessionForm.class = response.data.class),
-          (this.sections = response.data.sections),
-        ])
+        .then((response) => [(this.classes = response.data.row)])
         .catch((error) => console.log(error));
     },
-    submit() {
+    submitSession() {
       if (!this.editContent) {
         this.sessionForm.post(route("lecturer.sessions.store"), {
-          forceFormData: true,
           onSuccess: () => {
-            this.closeModal();
-            toastr.success("Record successfully saved");
+            this.hideSessionFormModal();
+            toastr.success("Session successfully created");
             this.fetchSessions();
           },
           onError: (errors) => {
@@ -337,362 +251,451 @@ export default {
           },
         });
       } else {
-        this.sessionForm.post(
-          route("lecturer.sessions.update", this.sessionForm.id),
-          {
-            forceFormData: true,
-            _method: "PUT",
-            onSuccess: () => {
-              this.closeModal();
-              toastr.success("Record successfully updated");
-              this.fetchSessions();
-            },
-            onError: (errors) => {
-              toastr.error("Something went wrong");
-            },
-          }
-        );
+        this.sessionForm.put(route("lecturer.sessions.update", this.sessionForm.id), {
+          onSuccess: () => {
+            this.hideSessionFormModal();
+            toastr.success("Session successfully updated");
+            this.fetchSessions();
+          },
+          onError: (errors) => {
+            toastr.error("Something went wrong");
+          },
+        });
       }
     },
-    toggleDropdown(data) {
-      this.openDropdownMenu = !this.openDropdownMenu
-
-      const targetDropdown = $('#dropdown-menu' + data)
-
-      if (this.openDropdownMenu) {
-        targetDropdown.removeClass('hidden');
-      } else {
-        targetDropdown.addClass('hidden');
-      }
-    },
-    closeDropdown() {
-      $('.dropdown-menu').addClass('hidden')
-    },
-  
-  }
-}
+  },
+};
 </script>
 
-
 <template>
-  <Head title="Attendance Sessions" />
+  <Head title="Attendance" />
 
-  <AuthenticatedLayout @click="closeDropdown">
+  <AuthenticatedLayout>
     <template #header>
-      <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-        Attendance Sessions
-      </h2>
+      <h2 class="font-semibold text-xl text-gray-800 leading-tight">Attendance</h2>
     </template>
 
     <div class="py-12 px-3 md:px-0">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <!-- sessions label -->
-        <div class="bg-white shadow-sm rounded-md p-6">
-          <div class="flex justify-end">
-            <button @click="createSession"
-              class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-              <svg width="20" height="20" fill="currentColor" class="mr-2" aria-hidden="true">
-                <path
-                  d="M10 5a1 1 0 0 1 1 1v3h3a1 1 0 1 1 0 2h-3v3a1 1 0 1 1-2 0v-3H6a1 1 0 1 1 0-2h3V6a1 1 0 0 1 1-1Z" />
-              </svg>
-              add
-            </button>
-          </div>
-
-          <div class="mt-3 overflow-auto shadow-sm rounded-md">
-            <table id="sessions_table" class="w-full text-sm text-left table-striped">
-              <thead class="text-gray-700 capitalize bg-gray-100">
-                <tr>
-                  <th scope="col" class="px-6 py-3">Created At</th>
-                  <th scope="col" class="px-6 py-3">Course</th>
-                  <th scope="col" class="px-6 py-3">Class</th>
-                  <th scope="col" class="px-6 py-3">section</th>
-                  <th scope="col" class="px-6 py-3">starts at</th>
-                  <th scope="col" class="px-6 py-3">ends at</th>
-                  <th scope="col" class="px-6 py-3">venue</th>
-                  <th scope="col" class="px-6 py-3">status</th>
-                  <th scope="col" class="px-6 py-3">Action</th>
-                </tr>
-              </thead>
-            </table>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-9">
+          <div class="bg-white shadow-sm rounded-md p-6">
+            <div class="flex justify-center">
+              <span class="material-symbols-outlined text-4xl lg:text-6xl"> add </span>
+            </div>
+            <div class="text-center mt-3">
+              <p class="font-bold text-md lg:text-lg">New Attendance</p>
+            </div>
+            <div class="flex justify-center mt-5">
+              <PrimaryButton
+                type="button"
+                @click="showSessionFormModal('add')"
+                class="uppercase tracking-widest text-xs"
+              >
+                create
+              </PrimaryButton>
+            </div>
           </div>
         </div>
-        <!-- end of sessions label -->
+
+        <!-- attendance board -->
+        <div class="mt-10">
+          <div class="bg-white shadow-sm rounded-md p-6">
+            <div class="flex justify-between items-center">
+              <p class="text-lg font-bold capitalize">sessions</p>
+              <div>
+                <TextInput
+                  id="calendar"
+                  type="date"
+                  v-model="filterForm.date"
+                  class="w-full"
+                  @change="fetchSessions"
+                />
+              </div>
+            </div>
+
+            <div v-if="isLoadingData" class="h-96 flex justify-center items-center">
+              <p
+                class="text-center text-md text-gray-800 inline-flex items-center gap-x-3"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="w-8 h-8 text-gray-300 animate-spin fill-black"
+                  viewBox="0 0 100 101"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
+                    fill="currentColor"
+                  />
+                  <path
+                    d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
+                    fill="currentFill"
+                  />
+                </svg>
+                <span class="sr-only">Loading...</span> Loading data. Please wait.
+              </p>
+            </div>
+            <div v-else>
+              <div v-if="sessions.length != 0" class="flex flex-col space-y-4 mt-12">
+                <div
+                  v-for="session in sessions"
+                  class="border border-gray-300 py-3 px-4 flex flex-col md:flex-row md:items-center justify-between rounded-lg shadow-sm"
+                >
+                  <div
+                    class="w-full md:w-11/12 flex flex-col md:flex-row md:items-center gap-x-3 divide-y md:divide-y-0 md:divide-x"
+                  >
+                    <div class="flex flex-col md:text-right md:w-1/4 pb-2 md:pb-0">
+                      <p class="text-sm font-bold">{{ session.starts }}</p>
+                      <p class="text-sm">{{ session.ends }}</p>
+                    </div>
+
+                    <div class="flex flex-col md:w-3/4 pt-3 md:pt-0 md:ps-4">
+                      <p
+                        class="font-semibold overflow-hidden whitespace-nowrap text-ellipsis"
+                      >
+                        {{ session.course.code }}: {{ session.title }}
+                      </p>
+                      <p class="text-sm overflow-hidden whitespace-nowrap text-ellipsis">
+                        Class: {{ session.classe.title }}
+                      </p>
+                      <p class="text-sm overflow-hidden whitespace-nowrap text-ellipsis">
+                        Status: {{ session.status }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 md:mt-0 flex justify-end md:justify-start">
+                    <Dropdown align="right" width="48">
+                      <template #trigger>
+                        <button
+                          type="button"
+                          class="px-3 py-2 leading-4 font-medium hover:text-gray-800 focus:outline-none transition ease-in-out duration-150"
+                        >
+                          <span class="material-symbols-outlined"> more_horiz </span>
+                        </button>
+                      </template>
+
+                      <template #content>
+                        <button
+                          @click="startSession(session)"
+                          type="button"
+                          :disabled="session.status === 'Running'"
+                          class="start block w-full px-4 py-2 text-start text-sm leading-5 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                          Start
+                        </button>
+
+                        <button
+                          @click="showSessionFormModal('edit', session)"
+                          type="button"
+                          class="edit block w-full px-4 py-2 text-start text-sm leading-5 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          @click="showSessionOpenModal(session)"
+                          type="button"
+                          class="open block w-full px-4 py-2 text-start text-sm leading-5 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                          Open
+                        </button>
+
+                        <button
+                          @click="endSession(session)"
+                          type="button"
+                          :disabled="
+                            session.status === 'Scheduled' || session.status === 'Ended'
+                          "
+                          class="end block w-full px-4 py-2 text-start text-sm leading-5 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                          End
+                        </button>
+
+                        <button
+                          @click="showSessionDestroyModal(session)"
+                          type="button"
+                          class="delete block w-full px-4 py-2 text-start text-sm leading-5 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out disabled:cursor-not-allowed disabled:opacity-25"
+                        >
+                          Delete
+                        </button>
+                      </template>
+                    </Dropdown>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="h-96 flex flex-col justify-center items-center">
+                <p class="text-center text-md text-gray-700">No sessions scheduled</p>
+
+                <PrimaryButton
+                  type="button"
+                  @click="showSessionFormModal('add')"
+                  class="uppercase tracking-widest text-xs mt-5"
+                  >create Attendance
+                </PrimaryButton>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- end of attendance board -->
       </div>
     </div>
-    <!-- sessions form modal -->
-    <Modal :show="showModal" :closeable="true" :modalTitle="action + ' session'" @close="closeModal" :maxWidth="'lg'">
-      <!-- sessions form -->
 
-      <form @submit.prevent="submit" class="mt-4 px-2 pb-2" enctype="multipart/form-data">
-        <div class="grid grid-cols-3 gap-5">
-          <div>
-            <InputLabel for="course" value="Course" :required="true" />
-            <select v-model="sessionForm.course_id" name="course_id" @change="fetchClass"
-              class="w-full rounded-sm border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-gray-700 focus:outline-none focus:ring-gray-700 sm:text-sm"
-              :class="{ 'border-red-600': sessionForm.errors.course_id }">
-              <option value="" disabled>-- Select course --</option>
+    <!-- sessions form modal -->
+    <Modal
+      :show="sessionFormModal"
+      :closeable="true"
+      :modalTitle="this.action + ' session'"
+      @close="hideSessionFormModal"
+      :maxWidth="'md'"
+    >
+      <form @submit.prevent="submitSession" class="mt-4 px-2 pb-2">
+        <div class="grid grid-cols-2 gap-5">
+          <div class="col-span-full">
+            <InputLabel for="title" value="Title" :required="true" />
+            <TextInput
+              id="title"
+              type="text"
+              class="w-full"
+              v-model="sessionForm.title"
+              :placeholder="'Title'"
+              autocomplete="title"
+              :class="{ 'border-red-600': sessionForm.errors.title }"
+            />
+            <InputError :message="sessionForm.errors.title" class="mt-2" />
+          </div>
+
+          <div class="col-span-full">
+            <InputLabel for="course_id" value="Course" :required="true" />
+            <SelectInput
+              id="course_id"
+              v-model="sessionForm.course_id"
+              class="w-full"
+              @change="fetchClass"
+              :class="{ 'border-red-600': sessionForm.errors.course_id }"
+            >
+              <option value="" disabled>-- Select Course --</option>
               <option v-for="course in courses" :key="course.id" :value="course.id">
-                {{ course.course_code }} {{ course.title }}
+                {{ course.code }} {{ course.title }}
               </option>
-            </select>
+            </SelectInput>
             <InputError :message="sessionForm.errors.course_id" class="mt-2" />
           </div>
 
-          <div>
-            <InputLabel for="class" value="Class" />
-            <input v-model="sessionForm.class" name="class" type="text"
-              class="date w-full rounded-sm border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-gray-300 focus:outline-none focus:ring-gray-300 sm:text-sm read-only:cursor-not-allowed read-only:bg-gray-200"
-              placeholder="Class" :readonly="true" />
-          </div>
-
-          <div>
-            <InputLabel for="section" value="Section" :required="sections.length > 1" />
-            <select v-model="sessionForm.section_id" name="section_id" :disabled="sections.length <= 1"
-              class="w-full rounded-sm border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-gray-700 focus:outline-none focus:ring-gray-700 sm:text-sm disabled:cursor-not-allowed disabled:bg-gray-200"
-              :class="{ 'border-red-600': sessionForm.errors.section_id }">
-              <option value="" disabled>-- Select section --</option>
-              <option v-for="section in sections" :key="section.id" :value="section.id">
-                {{ section.title }}
+          <div class="col-span-full">
+            <InputLabel for="classe_id" value="Class" :required="true" />
+            <SelectInput
+              id="classe_id"
+              v-model="sessionForm.classe_id"
+              class="w-full"
+              :class="{ 'border-red-600': sessionForm.errors.classe_id }"
+            >
+              <option value="" selected disabled>-- Select Class --</option>
+              <option v-for="classe in this.classes" :key="classe.id" :value="classe.id">
+                {{ classe.title }}
               </option>
-            </select>
-            <InputError :message="sessionForm.errors.section_id" class="mt-2" />
+            </SelectInput>
+            <InputError :message="sessionForm.errors.classe_id" class="mt-2" />
           </div>
 
-          <div>
-            <InputLabel for="venue" value="Venue" :required="true" />
-            <select v-model="sessionForm.venue_id" name="venue_id"
-              class="w-full rounded-sm border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-gray-700 focus:outline-none focus:ring-gray-700 sm:text-sm"
-              :class="{ 'border-red-600': sessionForm.errors.venue_id }">
-              <option value="" disabled>-- Select venue --</option>
+          <div class="col-span-full">
+            <InputLabel for="venue_id" value="Venue" :required="true" />
+            <SelectInput
+              id="venue_id"
+              v-model="sessionForm.venue_id"
+              class="w-full"
+              :class="{ 'border-red-600': sessionForm.errors.venue_id }"
+            >
+              <option value="" disabled>-- Select Venue --</option>
               <option v-for="venue in venues" :key="venue.id" :value="venue.id">
                 {{ venue.title }}
               </option>
-            </select>
+            </SelectInput>
             <InputError :message="sessionForm.errors.venue_id" class="mt-2" />
           </div>
 
-          <div>
+          <div class="col-span-full lg:col-span-1">
             <InputLabel for="starts_at" value="Starts At" :required="true" />
-            <input v-model="sessionForm.starts_at" name="starts_at" type="datetime-local"
-              class="date w-full rounded-sm border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-gray-700 focus:outline-none focus:ring-gray-700 sm:text-sm"
-              :min="minDateTime" :class="{ 'border-red-600': sessionForm.errors.starts_at }" />
+            <TextInput
+              id="starts_at"
+              type="datetime-local"
+              class="w-full"
+              v-model="sessionForm.starts_at"
+              :min="new Date().toISOString().slice(0, 16)"
+              :class="{ 'border-red-600': sessionForm.errors.starts_at }"
+            />
             <InputError :message="sessionForm.errors.starts_at" class="mt-2" />
           </div>
 
-          <div>
+          <div class="col-span-full lg:col-span-1">
             <InputLabel for="ends_at" value="Ends At" :required="true" />
-            <input v-model="sessionForm.ends_at" name="ends_at" type="datetime-local"
-              class="date w-full rounded-sm border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-gray-700 focus:outline-none focus:ring-gray-700 sm:text-sm"
-              :min="minDateTime" :class="{ 'border-red-600': sessionForm.errors.ends_at }" />
+            <TextInput
+              id="ends_at"
+              type="datetime-local"
+              class="w-full"
+              v-model="sessionForm.ends_at"
+              :min="new Date().toISOString().slice(0, 16)"
+              :class="{ 'border-red-600': sessionForm.errors.ends_at }"
+            />
             <InputError :message="sessionForm.errors.ends_at" class="mt-2" />
           </div>
         </div>
 
-        <div class="flex items-center mt-7 text-gray-600 gap-2">
-          <span class="material-symbols-outlined text-md ">
-            info
+        <PrimaryButton
+          type="submit"
+          :disabled="sessionForm.processing"
+          :class="{ 'opacity-25': sessionForm.processing }"
+          class="mt-5 font-semibold tracking-widest text-xs text-white uppercase"
+        >
+          <div v-if="editContent == false" v-text="'Save'"></div>
+          <div v-else v-text="'Update'"></div>
+        </PrimaryButton>
+      </form>
+    </Modal>
+    <!-- end of session form modal -->
+
+    <!-- open session modal -->
+    <Modal
+      :show="sessionOpenModal"
+      :closeable="true"
+      :modalTitle="''"
+      @close="hideSessionOpenModal"
+      :maxWidth="'lg'"
+    >
+      <div class="divide-y divide-gray-800">
+        <div class="pb-3">
+          <p class="font-bold text-xl overflow-hidden whitespace-nowrap text-ellipsis">
+            {{ this.selectedRow.course.code }}: {{ this.selectedRow.title }}
+          </p>
+          <p class="font-bold">{{ this.selectedRow.classe.title }}</p>
+          <p class="text-md">
+            {{ this.selectedRow.full_date }} at {{ this.selectedRow.venue.title }}
+          </p>
+          <p class="mt-4 text-gray-600 text-sm">{{ this.selectedRow.status }}</p>
+        </div>
+        <div class="py-3">
+          <div class="mb-4 border-b border-gray-200">
+            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+              <li class="me-2">
+                <p
+                  class="font-bold text-lg px-4 py-3.5 border-b-2 text-gray-800 border-gray-800"
+                >
+                  Attendees ({{ this.selectedRow.attendance.length }})
+                </p>
+              </li>
+            </ul>
+          </div>
+          <div
+            v-if="this.selectedRow.attendance.length != 0"
+            class="p-4 flex flex-col space-y-4"
+          >
+            <div class="flex flex-col">
+              <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div class="py-2 inline-w-full sm:px-6 lg:px-8">
+                  <div class="overflow-x-auto">
+                    <table id="attendance_data_table" class="w-full table-striped">
+                      <thead class="capitalize border-b bg-gray-100 font-medium">
+                        <tr>
+                          <th
+                            scope="col"
+                            class="text-sm text-gray-900 px-6 py-4 text-left"
+                          >
+                            Signed At
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-sm text-gray-900 px-6 py-4 text-left"
+                          >
+                            Name
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-sm text-gray-900 px-6 py-4 text-left"
+                          >
+                            Student ID
+                          </th>
+                          <th
+                            scope="col"
+                            class="text-sm text-gray-900 px-6 py-4 text-left"
+                          >
+                            Index Number
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody class="text-sm">
+                        <tr v-for="attendance in this.selectedRow.attendance">
+                          <td>{{ attendance.signed_at }}</td>
+                          <td>{{ attendance.student.name }}</td>
+                          <td>{{ attendance.student.student_id }}</td>
+                          <td>{{ attendance.student.index_number }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Modal>
+    <!-- end of opened session modal -->
+
+    <!-- destroy session modal -->
+    <Modal
+      :show="sessionDestroyModal"
+      :closeable="true"
+      :modalTitle="'delete session'"
+      @close="hideSessionDestroyModal"
+      :maxWidth="'lg'"
+    >
+      <div class="flex flex-col justify-center space-y-4">
+        <!-- Exclamation Icon -->
+        <div class="text-center">
+          <span class="material-symbols-outlined text-9xl text-gray-800">
+            exclamation
           </span>
-          <p class="text-sm">You cannot Edit session after session is published.
-            <br>
-            <i>If you wish to make changes, then you will need to delete the session and recreate it.</i>
+        </div>
+
+        <!-- Warning Text -->
+        <div class="flex justify-center text-gray-800">
+          <p class="text-center lg:w-2/3">
+            Deleting this session will result in the session being deleted immediately.
+            Once deleted, students will not be able to access the session. All records of
+            this session will also be deleted. This action is irreversible.
           </p>
         </div>
 
-
-        <button type="submit" :disabled="sessionForm.processing" :class="{ 'opacity-25': sessionForm.processing }"
-          class="mt-4 block items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          <div v-if="editContent == false" v-text="'Save'"></div>
-          <div v-else v-text="'Update'"></div>
-        </button>
-      </form>
-
-      <!-- end of sessions form  -->
-    </Modal>
-    <!-- end of sessions form modal -->
-
-    <!-- publish session modal -->
-    <Modal :show="showPublishModal" :closeable="true" :modalTitle="'publish session'" @close="closePublishSessionModal"
-      :maxWidth="'lg'">
-
-      <div class="flex justify-center">
-        <span class="material-symbols-outlined text-9xl text-gray-800">
-          exclamation
-        </span>
-      </div>
-
-      <div class="flex justify-center mt-2 text-gray-600 gap-2">
-        <p class="text-md text-center w-2/3">You cannot Edit session after session is published. If you wish to make
-          changes, then you will need to delete the session and recreate it.</p>
-      </div>
-
-      <div class="flex justify-center mt-4">
-        <p class="text-lg">Are you sure you want to publish this session?</p>
-      </div>
-
-      <div class="flex justify-center mt-6 gap-4">
-        <button @click="publishSession(this.selectedSessionRow)" type="submit"
-          class="mt-4 block items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          Yes
-        </button>
-
-        <button @click="closePublishSessionModal" type="button"
-          class="mt-4 block items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-400 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          Cancel
-        </button>
-      </div>
-
-    </Modal>
-
-    <!-- end of  publish session modal-->
-
-    <!-- view session modal -->
-    <Modal :show="showViewModal" :closeable="true" :modalTitle="'view session'" @close="closeViewSessionModal"
-      :maxWidth="'lg'">
-
-      <div class="flex justify-between items-center">
-        <div class="text-md text-left font-bold">
-          <span>{{ students_present }}</span>
-          <p class="text-sm">Present</p>
+        <!-- Confirmation Prompt -->
+        <div class="flex justify-center">
+          <p class="text-lg">Are you sure you want to delete this session?</p>
         </div>
 
-        <div class="text-md text-right font-bold">
-          <span>{{ students_absent }}</span>
-          <p class="text-sm">Absent</p>
+        <!-- Buttons -->
+        <div class="flex justify-center mt-6 gap-4">
+          <!-- Delete Button -->
+          <PrimaryButton
+            @click="destroySession(this.selectedRow)"
+            type="button"
+            class="text-xs tracking-widest uppercase"
+          >
+            Yes
+          </PrimaryButton>
+
+          <!-- Cancel Button -->
+          <button
+            @click="hideSessionDestroyModal"
+            type="button"
+            class="px-4 py-2 bg-gray-500 text-white text-xs uppercase font-semibold rounded-md tracking-widest hover:bg-gray-400 focus:bg-gray-500 active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150"
+          >
+            Cancel
+          </button>
         </div>
       </div>
-
-      <div class="w-full h-2 bg-gray-300 rounded">
-        <div class="h-full bg-gray-800 rounded" :style="{ width: students_present_percentage + '%' }"></div>
-      </div>
-      <div class="flex justify-between items-center">
-        <div class="text-md text-left font-bold">
-          <span class="text-sm">{{ students_present_percentage }}%</span>
-        </div>
-
-        <div class="text-md text-right font-bold">
-          <span class="text-sm">{{ students_absent_percentage }}%</span>
-        </div>
-      </div>
-
-      <div class="mt-9">
-          <label class="text-sm">Show
-            <select v-model="attendanceFilter.status" name="status" @change="fetchAttendanceData" class="
-                    w-3/4
-                    md:w-1/2
-                    lg:w-1/3
-                    rounded-sm
-                    border border-gray-300
-                    bg-white
-                    py-2
-                    px-3
-                    shadow-sm
-                    focus:border-gray-700
-                    focus:outline-none
-                    focus:ring-gray-700
-                    sm:text-sm
-                  ">
-              <option value="present">Present</option>
-              <option value="absent">Absent</option>
-            </select>
-            students
-          </label>
-
-          <div class="mt-3 relative overflow-x-auto shadow-sm rounded-md">
-            <table id="attendance_table" class="w-full text-sm text-left table-striped">
-              <thead class="text-gray-700 capitalize bg-gray-100">
-                <tr>                  
-                  <th scope="col" class="px-6 py-3">
-                    student ID
-                  </th>
-                  <th scope="col" class="px-6 py-3">
-                    index No.
-                  </th>
-                  <th scope="col" class="px-6 py-3">
-                    name
-                  </th>
-                </tr>
-              </thead>
-            </table>
-          </div>
-        </div>
-
     </Modal>
 
-    <!-- end of  view session modal-->
-
-    <!-- end session modal -->
-    <Modal :show="showEndModal" :closeable="true" :modalTitle="'end session'" @close="closeEndSessionModal"
-      :maxWidth="'lg'">
-
-      <div class="flex justify-center">
-        <span class="material-symbols-outlined text-9xl text-gray-800">
-          exclamation
-        </span>
-      </div>
-
-
-
-      <div class="flex justify-center mt-2 text-gray-600 gap-2">
-        <p class="text-md text-center w-2/3">Ending this session will result in the session ending immediately. Students
-          will not be able to access the session once it has been ended. Once the session has ended, it cannot be
-          re-scheduled.</p>
-      </div>
-
-      <div class="flex justify-center mt-4">
-        <p class="text-lg">Are you sure you want to end this session?</p>
-      </div>
-
-      <div class="flex justify-center mt-6 gap-4">
-        <button @click="endSession(this.selectedSessionRow)" type="submit"
-          class="mt-4 block items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          Yes
-        </button>
-
-        <button @click="closeEndSessionModal" type="button"
-          class="mt-4 block items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-400 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          Cancel
-        </button>
-      </div>
-
-    </Modal>
-
-    <!-- end of  end session modal-->
-
-    <!-- delete session modal -->
-    <Modal :show="showDeleteModal" :closeable="true" :modalTitle="'delete session'" @close="closeDeleteSessionModal"
-      :maxWidth="'lg'">
-
-      <div class="flex justify-center">
-        <span class="material-symbols-outlined text-9xl text-gray-800">
-          exclamation
-        </span>
-      </div>
-
-      <div class="flex justify-center mt-2 text-gray-600 gap-2">
-        <p class="text-md text-center w-2/3">Deleting this session will result in the session deleting immediately. Once the session has been deleted, students
-          will not be able to access the session. All records of this session will also be deleted. This action is irreversible.</p>
-      </div>
-
-      <div class="flex justify-center mt-4">
-        <p class="text-lg">Are you sure you want to delete this session?</p>
-      </div>
-
-      <div class="flex justify-center mt-6 gap-4">
-        <button @click="deleteSession(this.selectedSessionRow)" type="submit"
-          class="mt-4 block items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          Yes
-        </button>
-
-        <button @click="closeDeleteSessionModal" type="button"
-          class="mt-4 block items-center px-4 py-2 bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-400 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:cursor-not-allowed">
-          Cancel
-        </button>
-      </div>
-
-    </Modal>
-
-    <!-- end of  delete session modal-->
-
+    <!-- end of destroy session modal-->
   </AuthenticatedLayout>
 </template>

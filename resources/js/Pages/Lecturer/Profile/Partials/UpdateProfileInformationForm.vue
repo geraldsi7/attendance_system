@@ -39,11 +39,11 @@ const form = useForm({
                 <TextInput
                     id="name"
                     type="text"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full read-only:cursor-not-allowed read-only:bg-gray-200 read-only:border-gray-300 focus:border-gray-300 focus:outline-none"
                     v-model="form.name"
                     required
-                    autofocus
                     autocomplete="name"
+                    readonly
                 />
 
                 <InputError class="mt-2" :message="form.errors.name" />
@@ -75,6 +75,7 @@ const form = useForm({
                     v-model="form.email"
                     required
                     autocomplete="email"
+                    autofocus
                 />
 
                 <InputError class="mt-2" :message="form.errors.email" />

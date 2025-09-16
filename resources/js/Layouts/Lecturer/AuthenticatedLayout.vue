@@ -56,7 +56,7 @@ export default{
                                     Students
                                 </NavLink>
                                 <NavLink :href="route('lecturer.sessions')" :active="route().current('lecturer.sessions')">
-                                    Attendance Sessions
+                                    Attendance
                                 </NavLink>
                             </div>
                         </div>
@@ -152,7 +152,7 @@ export default{
                             Students
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('lecturer.sessions')" :active="route().current('lecturer.sessions')">
-                            Attendance Sessions
+                            Attendance
                         </ResponsiveNavLink>
                     </div>
 
@@ -166,7 +166,7 @@ export default{
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')"> Profile </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('lecturer.profile.edit')"> Profile </ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('lecturer.logout')" method="post" as="button">
                                 Log Out
                             </ResponsiveNavLink>

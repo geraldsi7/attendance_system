@@ -1,20 +1,22 @@
 <script>
 import AuthenticatedLayout from "@/Layouts/Lecturer/AuthenticatedLayout.vue";
 import { Head, useForm } from "@inertiajs/inertia-vue3";
+import SelectInput from "@/Components/SelectInput.vue";
 
 export default {
   components: {
     AuthenticatedLayout,
     Head,
-    useForm
+    useForm,
+    SelectInput
   },
   props: {
     errors: Object,
-    grades: Object,
+    classes: Object,
   },
   data() {
     const classFilter = useForm({
-      class_id: this.grades[0].id,
+      class_id: this.classes[0].id,
     });
 
     return {
@@ -42,8 +44,7 @@ export default {
           { data: "name", name: "name" },
           { data: "student_id", name: "student_id" },
           { data: "index_number", name: "index_number" },
-          { data: "email", name: "email" },
-          { data: "section", name: "section" },
+          { data: "email", name: "email" }
         ],
         lengthMenu: [
           [10, 25, 50, 100, -1],
@@ -56,6 +57,7 @@ export default {
 </script>
 
 <template>
+
   <Head title="Students" />
 
   <AuthenticatedLayout>
@@ -69,29 +71,19 @@ export default {
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <!-- students label -->
         <div class="bg-white shadow-sm rounded-md p-6">
-          <label class="text-sm">Show
-            <select v-model="classFilter.class_id" name="class_id" @change="fetchStudents" class="
+          <span class="text-sm text-slate-600">Show
+            <SelectInput v-model="classFilter.class_id" name="class_id" @change="fetchStudents" class="
                     w-3/4
                     md:w-1/2
-                    lg:w-1/3
-                    rounded-sm
-                    border border-gray-300
-                    bg-white
-                    py-2
-                    px-3
-                    shadow-sm
-                    focus:border-gray-700
-                    focus:outline-none
-                    focus:ring-gray-700
-                    sm:text-sm
+                    lg:w-1/4
                   ">
               <option value="" disabled>-- Select class --</option>
-              <option v-for="grade in grades" :key="grade.id" :value="grade.id">
-                {{ grade.title }} {{ grade.year }} [{{ grade.iso }} {{ grade.year }}]
+              <option v-for="classe in classes" :key="classe.id" :value="classe.id">
+                {{ classe.title }}
               </option>
-            </select>
+            </SelectInput>
             students
-          </label>
+          </span>
 
           <div class="mt-3 relative overflow-x-auto shadow-sm rounded-md">
             <table id="students_table" class="w-full text-sm text-left table-striped">
@@ -108,9 +100,6 @@ export default {
                   </th>
                   <th scope="col" class="px-6 py-3">
                     email
-                  </th>
-                  <th scope="col" class="px-6 py-3">
-                    Section
                   </th>
                 </tr>
               </thead>

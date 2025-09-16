@@ -40,7 +40,9 @@ class HandleInertiaRequests extends Middleware
             $user = Auth('lecturer')->user();
         } else if(Auth::guard('student')->user()) {
            $user = Auth('student')->user();
-        } else{
+        } else if(Auth::guard('admin')->user()) {
+            $user = Auth('admin')->user();
+         } else{
             $user = null;
         }
         
@@ -51,7 +53,6 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $user,
-                'country' => $request->user() ? $auth_user->country : '',
                  ],
             'flash' => [
                     'error' => fn () => $request->session()->get('error'),

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Lecturer;
 use App\Models\Student;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;

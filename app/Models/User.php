@@ -46,33 +46,4 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
-
-    public function country()
-    {
-        return $this->belongsTo(Country::class);
-    }
-    public function purchase()
-    {
-        return $this->hasMany(Purchase::class)->withTrashed();
-    }
-
-    public function weekly_pay()
-    {
-        return $this->hasMany(WeeklyPays::class)->withTrashed();
-    }
-
-    public function monthly_pay()
-    {
-        return $this->hasMany(MonthlyPays::class)->withTrashed();
-    }
-
-    public function insurance()
-    {
-        return $this->hasMany(Insurance::class);
-    }
-
-    public function tax()
-    {
-        return $this->hasMany(Tax::class);
-    }
 }

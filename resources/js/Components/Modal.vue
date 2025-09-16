@@ -60,6 +60,7 @@ const maxWidthClass = computed(() => {
         '2xl': 'sm:max-w-2xl',
     }[props.maxWidth];
 });
+
 </script>
 
 <template>
@@ -93,7 +94,7 @@ const maxWidthClass = computed(() => {
                         :class="maxWidthClass"
                     >
                     <div class="flex justify-between items-center mb-6">
-                            <p class="text-xl font-normal capitalize">{{ this.modalTitle }}</p>
+                            <p class="text-xl font-normal capitalize">{{ props.modalTitle }}</p>
                             <button @click="close"><span class="material-symbols-outlined text-3xl">
 close
 </span></button>

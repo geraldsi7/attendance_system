@@ -47,10 +47,7 @@ export default{
                             <!-- Navigation Links -->
                             <div class="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
                                 <NavLink :href="route('student.dashboard')" :active="route().current('student.dashboard')">
-                                    Dashboard
-                                </NavLink>
-                                <NavLink :href="route('student.sessions')" :active="route().current('student.sessions')">
-                                    Attendance Sessions
+                                    Attendance
                                 </NavLink>
                             </div>
                         </div>
@@ -137,10 +134,7 @@ export default{
                 >
                     <div class="pt-2 pb-3 space-y-1">
                         <ResponsiveNavLink :href="route('student.dashboard')" :active="route().current('student.dashboard')">
-                            Dashboard
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('student.sessions')" :active="route().current('student.sessions')">
-                            Attendance Sessions
+                            Attendance
                         </ResponsiveNavLink>
                     </div>
 

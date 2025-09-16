@@ -9,15 +9,22 @@ class Course extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'title',
+        'code'
+    ];
+
     public function lecturer(){
-        return $this->belongsTo(Lecturer::class);
+        return $this->belongsToMany(Lecturer::class);
     }
 
-    public function grade(){
-        return $this->belongsTo(Grade::class);
+    public function classe()
+    {
+        return $this->belongsToMany(Classe::class);
     }
 
-    public function session(){
+    public function session()
+    {
         return $this->hasMany(Session::class);
     }
 }

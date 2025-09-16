@@ -9,16 +9,12 @@ class Section extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'title'
+    ];
 
-    public function grade(){
-        return $this->belongsTo(Grade::class);
-    }
-
-    public function student(){
-        return $this->hasMany(Student::class);
-    }
-
-    public function session(){
-        return $this->hasMany(Session::class);
+    public function classe()
+    {
+        return $this->hasMany(Classe::class);
     }
 }
