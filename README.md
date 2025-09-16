@@ -126,15 +126,15 @@ The Student Attendance Management System is a modern, full-featured application 
 ## 📱 Screenshots
 
 ### Dashboard Overview
-![Dashboard](public/img/dashboard-screenshot.png)
+<img width="1920" height="918" alt="LecturerDashboard" src="https://github.com/user-attachments/assets/253b60b8-a1ba-4164-98be-738222794347" />
 *Comprehensive dashboard showing attendance statistics, recent sessions, and system overview*
 
 ### Attendance Management
-![Attendance](public/img/attendance-screenshot.png)
+<img width="1920" height="920" alt="OpenSession" src="https://github.com/user-attachments/assets/30c060b3-af1a-4b9b-b91c-558a966b6375" />
 *Real-time attendance tracking interface with student list and session details*
 
 ### Session Management
-![Sessions](public/img/sessions-screenshot.png)
+<img width="1920" height="920" alt="AddSession" src="https://github.com/user-attachments/assets/6231a6b3-1f46-4d4f-befc-e0d30d67b704" />
 *Session scheduling and management interface for lecturers*
 
 ## 🏗️ System Architecture
@@ -207,18 +207,6 @@ For email notifications, configure your queue driver:
 ```env
 QUEUE_CONNECTION=database
 ```
-
-## 📝 License
-
-This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit a Pull Request.
-
-## 📞 Contact
-
-For support or questions, please contact the development team or create an issue in the repository.
 
 ---
 
